@@ -31,7 +31,7 @@ class _MyAppState extends State<MyApp> {
   final scrollController = ScrollController();
   Timer? timer;
   var indexes = <int>[]; // current visible indexes
-  int activeIndex = -1; // clicked index
+  int requestedIndex = -1; // clicked index
   List<GlobalKey>? keys;
 
   @override
@@ -50,25 +50,14 @@ class _MyAppState extends State<MyApp> {
             }
           }
         }
-        //print(indexes);
-        // if (timer != null) {
-        //   timer!.cancel();
-        //   timer = null;
-        // }
-        // if (activeIndex != -1) {
-        //   final tmp = activeIndex;
-        //   activeIndex = -1;
-        //   timer = Timer(const Duration(seconds: 0), () {
-        //     makeVisible(tmp);
-        //   });
-        // }
 
-        if (activeIndex != -1 && keys![activeIndex].currentContext != null) {
+        if (requestedIndex != -1 &&
+            keys![requestedIndex].currentContext != null) {
           //scrollController.position.hold(() {});
           scrollController.jumpTo(scrollController.offset);
-          print('Ensure visible for $activeIndex');
-          final tmp = activeIndex;
-          activeIndex = -1;
+          print('Ensure visible for $requestedIndex');
+          final tmp = requestedIndex;
+          requestedIndex = -1;
           //await Scrollable.ensureVisible(keys![tmp].currentContext!);
           Scrollable.ensureVisible(keys![tmp].currentContext!);
         }
@@ -76,14 +65,6 @@ class _MyAppState extends State<MyApp> {
     );
     init();
   }
-
-  // void makeVisible(int index) async {
-  //   print('Make visible?');
-  //   if (index != -1 && keys![index].currentContext != null) {
-  //     print('Ensure visible for $index');
-  //     Scrollable.ensureVisible(keys![index].currentContext!);
-  //   }
-  // }
 
   @override
   void dispose() {
@@ -149,8 +130,8 @@ class _MyAppState extends State<MyApp> {
                             scrollDown = true;
                           }
                         }
-                        //final scrollDown = itemIndex > activeIndex;
-                        activeIndex = itemIndex;
+                        //final scrollDown = itemIndex > requestedIndex;
+                        requestedIndex = itemIndex;
                         print(
                             'Scrolling ${scrollDown ? 'down' : 'up'} to ${scrollDown ? scrollController.position.maxScrollExtent : scrollController.position.minScrollExtent} for index $itemIndex');
                         await scrollController.animateTo(
@@ -163,8 +144,8 @@ class _MyAppState extends State<MyApp> {
                             // hoe labger hoe beter, want dan worden items niet geskipt.
                             curve: Curves
                                 .linear); // linear is belangrijk, want dan komen alle items even snel voorbij en worden de snelste niet geskipt.
-                        print('Animate completed: ${activeIndex}');
-                        if (activeIndex != -1) {
+                        print('Animate completed: ${requestedIndex}');
+                        if (requestedIndex != -1) {
                           // Niet gelukt, dus we kunnen dan eventueel nog 2 keer proberen bijv.
                         }
                         //scrollController.jumpTo(value); // this will cancel the animation!
@@ -182,7 +163,7 @@ class _MyAppState extends State<MyApp> {
                   controller: scrollController,
                   itemCount: curItems.length,
                   itemBuilder: (context, index) {
-                    //print(index);
+                    print('Index = $index, requestedIndex = $requestedIndex');
                     final e = curItems[index];
                     final card = Card(
                       key: keys![index],
@@ -202,31 +183,13 @@ class _MyAppState extends State<MyApp> {
                             padding: const EdgeInsets.all(8.0),
                             child: Text(e['content']),
                           ),
-                          Image.network(e['image'])
+                          // Load image only if we scroll manually (requestedIndex == -1) or when the index is less than 3 away from requestedIndex
+                          if (requestedIndex == -1 ||
+                              (index - requestedIndex).abs() < 3)
+                            Image.network(e['image'])
                         ],
                       ),
                     );
-
-                    //
-                    // if (!keys.containsKey(index)) {
-                    //   keys[index] = GlobalKey();
-                    // }
-                    // if (activeIndex > -1) {
-                    // if (index == activeIndex) {
-                    //   activeIndex = -1;
-
-                    //   print(
-                    //       'Index = $index, so now stop in current position ${scrollController.offset}!');
-                    //   scrollController.jumpTo(scrollController.offset);
-                    //   //     if (keys[index]!.currentContext != null) {
-                    //   //       print('Key = ${keys[index]}');
-                    //   if (keys![index].currentContext != null) {
-                    //     print('Ensure!');
-                    //     Scrollable.ensureVisible(keys![index].currentContext!);
-                    //   }
-                    //   //     }
-                    //   //   }
-                    // }
                     return card;
                   }))
         ],
