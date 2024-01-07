@@ -109,4 +109,12 @@ class MyStore {
     final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
     await file.writeAsString(contents);
   }
+
+  static Future removeTimelineItems(int timelineHostId, int timelineId) async {
+    final dir = await _localPath;
+    final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
 }

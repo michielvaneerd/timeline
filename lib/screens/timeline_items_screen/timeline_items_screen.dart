@@ -10,7 +10,9 @@ import 'package:timeline/models/timeline_item.dart';
 
 class TimelineItemsWidget extends StatefulWidget {
   final List<TimelineItem> timelineItems;
-  const TimelineItemsWidget({super.key, required this.timelineItems});
+  final Future Function() onRefresh;
+  const TimelineItemsWidget(
+      {super.key, required this.timelineItems, required this.onRefresh});
 
   @override
   State<TimelineItemsWidget> createState() => _TimelineItemsWidgetState();
@@ -143,40 +145,45 @@ class _TimelineItemsWidgetState extends State<TimelineItemsWidget> {
               }).toList(),
             )),
         Expanded(
-            child: ListView.builder(
-                controller: scrollController,
-                itemCount: curItems.length,
-                itemBuilder: (context, index) {
-                  print('Index = $index, requestedIndex = $requestedIndex');
-                  final e = curItems[index];
-                  final card = Card(
-                    key: keys![index],
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text('$index: ' + e.year.toString()),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(e.title),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(e.intro),
-                        ),
-                        // Load image only if we scroll manually (requestedIndex == -1) or when the index is less than 3 away from requestedIndex
-                        if (e.image != null &&
-                            ((requestedIndex == -1 ||
-                                (index - requestedIndex).abs() < 3)))
-                          Image.network(e.image!)
-                      ],
-                    ),
-                  );
-                  return card;
-                }))
+            child: RefreshIndicator(
+          onRefresh: () {
+            return widget.onRefresh();
+          },
+          child: ListView.builder(
+              controller: scrollController,
+              itemCount: curItems.length,
+              itemBuilder: (context, index) {
+                print('Index = $index, requestedIndex = $requestedIndex');
+                final e = curItems[index];
+                final card = Card(
+                  key: keys![index],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text('$index: ' + e.year.toString()),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(e.title),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(e.intro),
+                      ),
+                      // Load image only if we scroll manually (requestedIndex == -1) or when the index is less than 3 away from requestedIndex
+                      if (e.image != null &&
+                          ((requestedIndex == -1 ||
+                              (index - requestedIndex).abs() < 3)))
+                        Image.network(e.image!)
+                    ],
+                  ),
+                );
+                return card;
+              }),
+        ))
       ],
     );
   }

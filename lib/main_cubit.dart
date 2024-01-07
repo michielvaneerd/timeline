@@ -17,18 +17,25 @@ class MainCubit extends Cubit<MainState> {
   final TimelineRepository timelineRepository;
   MainCubit(this.timelineRepository) : super(const MainState());
 
-  void checkAtStart() async {
-    emit(const MainState(busy: true));
+  Future checkAtStart({bool withBusy = true}) async {
+    if (withBusy) {
+      emit(const MainState(busy: true));
+    }
     final timelineAll = await timelineRepository.getAll();
     emit(MainState(
       timelineAll: timelineAll,
     ));
   }
 
+  Future refreshTimeline(int timelineHostId, int timelineId) async {
+    await MyStore.removeTimelineItems(timelineHostId, timelineId);
+    await checkAtStart();
+  }
+
   void activateTimeline(int timelineId) async {
     emit(const MainState(busy: true));
     await MyStore.putActiveTimelineId(timelineId);
-    checkAtStart();
+    checkAtStart(withBusy: false);
   }
 
   void closeTimeline() async {

@@ -61,7 +61,16 @@ class MyApp extends StatelessWidget {
                   : (state.timelineAll?.activeTimelineId != null &&
                           state.timelineAll?.timelineItems != null
                       ? TimelineItemsWidget(
-                          timelineItems: state.timelineAll!.timelineItems!)
+                          timelineItems: state.timelineAll!.timelineItems!,
+                          onRefresh: () async {
+                            return cubit.refreshTimeline(
+                                state.timelineAll!.timelineHosts
+                                    .firstWhere(
+                                        (e) => e.id == activeTimeline!.hostId)
+                                    .id,
+                                activeTimeline!.id);
+                          },
+                        )
                       : ElevatedButton(
                           onPressed: state.timelineAll != null
                               ? () async {
