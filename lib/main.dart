@@ -36,9 +36,24 @@ class MyApp extends StatelessWidget {
       },
       builder: (context, state) {
         final cubit = BlocProvider.of<MainCubit>(context);
+        final activeTimeline = state.timelineAll?.activeTimelineId != null
+            ? state.timelineAll!.timelines.firstWhere(
+                (e) => e.id == state.timelineAll!.activeTimelineId,
+              )
+            : null;
         return Scaffold(
             appBar: AppBar(
-              title: Text(state.timelineAll != null ? 'YES' : 'NO'),
+              title: Text(
+                  activeTimeline != null ? activeTimeline.name : 'Timeline'),
+              actions: activeTimeline != null
+                  ? [
+                      TextButton(
+                          onPressed: () {
+                            cubit.closeTimeline();
+                          },
+                          child: const Text('Close'))
+                    ]
+                  : null,
             ),
             body: Center(
               child: state.busy

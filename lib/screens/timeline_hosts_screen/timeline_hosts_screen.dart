@@ -31,10 +31,7 @@ class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
       if (t.hostId == host.id) {
         widgets.add(ElevatedButton(
             onPressed: () {
-              //Navigator.of(context).pop(t.id);
-              // TODO: hier de timeline items ophalen en opslaan
-              // en dan pas de id terug geven.
-              // Dus de main window heeft altijd een stored items list.
+              Navigator.of(context).pop(t.id);
             },
             child: Text(t.name)));
       }
@@ -49,7 +46,10 @@ class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
       create: (context) => TimelineHostsScreenCubit(repo),
       child: BlocConsumer<TimelineHostsScreenCubit, TimelineHostsScreenState>(
         listener: (context, state) {
-          // TODO: implement listener
+          if (state.error != null) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(state.error!)));
+          }
         },
         builder: (context, state) {
           final cubit = BlocProvider.of<TimelineHostsScreenCubit>(context);
@@ -70,7 +70,8 @@ class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
                     onPressed: state.busy
                         ? null
                         : () {
-                            cubit.addHost(createHostController.text);
+                            cubit.addHost(
+                                createHostController.text, timelineAll);
                           },
                     child: const Text('Add'))
               ],

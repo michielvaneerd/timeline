@@ -39,12 +39,14 @@ class MyStore {
     }
   }
 
-  static Future putActiveTimelineId(int timelineId) async {
+  static Future putActiveTimelineId(int? timelineId) async {
     await database!.transaction((txn) async {
       await txn.delete('settings',
           where: 'key = ?', whereArgs: [keySettingsActiveTimelineId]);
-      await txn.insert('settings',
-          {'key': keySettingsActiveTimelineId, 'value': timelineId});
+      if (timelineId != null) {
+        await txn.insert('settings',
+            {'key': keySettingsActiveTimelineId, 'value': timelineId});
+      }
     });
   }
 

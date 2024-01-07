@@ -30,4 +30,10 @@ class MainCubit extends Cubit<MainState> {
     await MyStore.putActiveTimelineId(timelineId);
     checkAtStart();
   }
+
+  void closeTimeline() async {
+    emit(const MainState(busy: true));
+    await MyStore.putActiveTimelineId(null);
+    checkAtStart();
+  }
 }
