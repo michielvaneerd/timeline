@@ -58,18 +58,11 @@ class MyApp extends StatelessWidget {
             body: Center(
               child: state.busy
                   ? const CircularProgressIndicator()
-                  : (state.timelineAll?.activeTimelineId != null &&
-                          state.timelineAll?.timelineItems != null
+                  : (activeTimeline != null
                       ? TimelineItemsWidget(
-                          timelineItems: state.timelineAll!.timelineItems!,
-                          onRefresh: () async {
-                            return cubit.refreshTimeline(
-                                state.timelineAll!.timelineHosts
-                                    .firstWhere(
-                                        (e) => e.id == activeTimeline!.hostId)
-                                    .id,
-                                activeTimeline!.id);
-                          },
+                          timeline: activeTimeline,
+                          timelineHost: state.timelineAll!.timelineHosts
+                              .firstWhere((e) => e.id == activeTimeline.hostId),
                         )
                       : ElevatedButton(
                           onPressed: state.timelineAll != null
@@ -82,6 +75,9 @@ class MyApp extends StatelessWidget {
                                               )));
                                   if (timelineId != null) {
                                     cubit.activateTimeline(timelineId);
+                                  } else {
+                                    // TODO: we can check if timelineAll has changed...
+                                    cubit.checkAtStart(withBusy: false);
                                   }
                                 }
                               : null,

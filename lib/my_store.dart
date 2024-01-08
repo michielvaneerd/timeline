@@ -60,10 +60,15 @@ class MyStore {
     return TimelineHost(id: id, host: host);
   }
 
-  static Future<List<Timeline>> getTimelines(int? timelineHostId) async {
+  static String _paramQuestions(List params) {
+    return params.map((e) => '?').join(',');
+  }
+
+  static Future<List<Timeline>> getTimelines(List<int>? hostIds) async {
     final rows = await database!.query('timelines',
-        where: timelineHostId != null ? 'host_id = ?' : null,
-        whereArgs: timelineHostId != null ? [timelineHostId] : null,
+        where:
+            hostIds != null ? 'host_id IN (${_paramQuestions(hostIds)})' : null,
+        whereArgs: hostIds,
         orderBy: 'name ASC');
     return rows.map((e) => Timeline.fromMap(e)).toList();
   }
@@ -83,6 +88,20 @@ class MyStore {
         });
       }
       await batch.commit(noResult: true);
+    });
+  }
+
+  static Future removeTimelineHosts(List<int> hostIds) async {
+    final timelines = await getTimelines(hostIds);
+    await database!.transaction((txn) async {
+      await txn.delete('timelines',
+          where: 'host_id IN (${_paramQuestions(hostIds)})',
+          whereArgs: hostIds);
+      await txn.delete('hosts',
+          where: 'id IN (${_paramQuestions(hostIds)})', whereArgs: hostIds);
+      for (final timeline in timelines) {
+        await removeTimelineItems(timeline.hostId, timeline.id);
+      }
     });
   }
 

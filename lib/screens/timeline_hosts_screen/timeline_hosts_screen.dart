@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:timeline/models/timeline_host.dart';
+import 'package:timeline/my_loading_overlay.dart';
 import 'package:timeline/repositories/timeline_repository.dart';
 import 'package:timeline/screens/timeline_hosts_screen/timeline_hosts_screen_bloc.dart';
 
@@ -14,26 +15,67 @@ class TimelineHostsScreen extends StatefulWidget {
 
 class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
   final createHostController = TextEditingController();
-
+  var selectionMode = false;
+  Map<int, bool> selectedHosts = {};
+  late int timelineAllHash;
+  final _loadingOverlay = LoadingOverlay();
   @override
   void dispose() {
     createHostController.dispose();
+    _loadingOverlay.hide();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    timelineAllHash = widget.timelineAll.hashCode;
   }
 
   TimelineAll _getTimelineAll(TimelineHostsScreenState? state) {
     return state?.timelineAll ?? widget.timelineAll;
   }
 
+  bool _isSelected(int hostId) {
+    return selectedHosts.containsKey(hostId) && selectedHosts[hostId]!;
+  }
+
   List<Widget> getHostTimelines(TimelineAll timelineAll, TimelineHost host) {
-    final List<Widget> widgets = [Text(host.host)];
+    final isSelected = _isSelected(host.id);
+    final List<Widget> widgets = [
+      ListTile(
+          onLongPress: () {
+            setState(() {
+              selectionMode = !selectionMode;
+              selectedHosts = {host.id: true};
+            });
+          },
+          onTap: () {
+            if (selectionMode) {
+              var copy = Map<int, bool>.of(selectedHosts);
+              if (isSelected) {
+                copy.remove(host.id);
+              } else {
+                copy[host.id] = true;
+              }
+              setState(() {
+                selectedHosts = copy;
+              });
+            }
+          },
+          leading: Icon(selectionMode
+              ? (isSelected ? Icons.check_box : Icons.check_box_outline_blank)
+              : Icons.circle),
+          title:
+              Text(host.host, style: Theme.of(context).textTheme.headlineSmall))
+    ];
     for (final t in timelineAll.timelines) {
       if (t.hostId == host.id) {
-        widgets.add(ElevatedButton(
-            onPressed: () {
+        widgets.add(ListTile(
+            onTap: () {
               Navigator.of(context).pop(t.id);
             },
-            child: Text(t.name)));
+            title: Text(t.name)));
       }
     }
     return widgets;
@@ -46,6 +88,13 @@ class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
       create: (context) => TimelineHostsScreenCubit(repo),
       child: BlocConsumer<TimelineHostsScreenCubit, TimelineHostsScreenState>(
         listener: (context, state) {
+          if (!state.busy) {
+            _loadingOverlay.hide();
+            setState(() {
+              selectionMode = false;
+              selectedHosts = {};
+            });
+          }
           if (state.error != null) {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text(state.error!)));
@@ -59,7 +108,22 @@ class _TimelineHostsScreenState extends State<TimelineHostsScreen> {
             items.addAll(getHostTimelines(timelineAll, h));
           }
           return Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(
+              title: const Text('Hosts'),
+              actions: selectionMode
+                  ? [
+                      IconButton(
+                          onPressed: selectedHosts.isNotEmpty
+                              ? () {
+                                  _loadingOverlay.show(context);
+                                  cubit
+                                      .removeHosts(selectedHosts.keys.toList());
+                                }
+                              : null,
+                          icon: const Icon(Icons.delete))
+                    ]
+                  : null,
+            ),
             body: Column(
               children: [
                 ...items,
