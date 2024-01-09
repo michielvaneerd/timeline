@@ -24,7 +24,7 @@ class TimelineItemsScreenCubit extends Cubit<TimelineItemsScreenState> {
       {bool refresh = false}) async {
     emit(const TimelineItemsScreenState(items: [], busy: true));
     if (refresh) {
-      await MyStore.removeTimelineItems(timelineHost.id, timeline.id);
+      await MyStore.removeTimelineItems(timeline.id);
     }
     final items =
         await timelineRepository.getTimelineItems(timelineHost, timeline);

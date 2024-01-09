@@ -31,6 +31,10 @@ class TimelineHostsScreenCubit extends Cubit<TimelineHostsScreenState> {
   }
 
   void addHost(String host, TimelineAll timelineAll) async {
+    if (host.isEmpty) {
+      emit(const TimelineHostsScreenState(error: 'Invalid host'));
+      return;
+    }
     emit(const TimelineHostsScreenState(busy: true));
     final currentHosts = await MyStore.getTimelineHosts();
     final existingHost =
@@ -40,8 +44,21 @@ class TimelineHostsScreenCubit extends Cubit<TimelineHostsScreenState> {
           error: 'Host already exists', timelineAll: timelineAll));
       return;
     }
-    final timelineHost = await MyStore.putTimelineHost(host);
-    await timelineRepository.getTimelines(timelineHost: timelineHost);
+
+    try {
+      final response = await timelineRepository.getTimelinesFromHostname(host);
+      final timelineHost = await MyStore.putTimelineHost(host);
+      await MyStore.putTimelinesFromResponse(
+          (response['items'] as List)
+              .map((e) => e as Map<String, dynamic>)
+              .toList(),
+          timelineHost.id);
+    } catch (ex) {
+      emit(TimelineHostsScreenState(error: ex.toString()));
+      return;
+    }
+
+    //await timelineRepository.getTimelines(timelineHost: timelineHost);
     final all = await timelineRepository.getAll();
     emit(TimelineHostsScreenState(timelineAll: all));
   }

@@ -22,9 +22,10 @@ class MyStore {
             'CREATE TABLE settings (id INTEGER PRIMARY KEY, key TEXT, value TEXT)');
         await db
             .execute('CREATE TABLE hosts (id INTEGER PRIMARY KEY, host TEXT)');
-        // FOREIGN KEY (host_id) REFERENCES hosts (id) ON DELETE CASCADE ON UPDATE NO ACTION
         await db.execute(
             'CREATE TABLE timelines (id INTEGER PRIMARY KEY, term_id INTEGER, name TEXT, description TEXT, host_id INT)');
+        await db.execute(
+            'CREATE TABLE items (id INTEGER PRIMARY KEY, timeline_id INTEGER, year INTEGER, intro TEXT, title TEXT, image TEXT)');
       },
     );
   }
@@ -64,7 +65,7 @@ class MyStore {
     return params.map((e) => '?').join(',');
   }
 
-  static Future<List<Timeline>> getTimelines(List<int>? hostIds) async {
+  static Future<List<Timeline>> getTimelines({List<int>? hostIds}) async {
     final rows = await database!.query('timelines',
         where:
             hostIds != null ? 'host_id IN (${_paramQuestions(hostIds)})' : null,
@@ -74,12 +75,12 @@ class MyStore {
   }
 
   static Future putTimelinesFromResponse(
-      List<Map<String, dynamic>> timelines, int timelineHostId) async {
+      List<Map<String, dynamic>> response, int timelineHostId) async {
     await database!.transaction((txn) async {
       final batch = txn.batch();
       txn.delete('timelines',
           where: 'host_id = ?', whereArgs: [timelineHostId]);
-      for (final timeline in timelines) {
+      for (final timeline in response) {
         txn.insert('timelines', {
           'term_id': timeline['term_taxonomy_id'],
           'name': timeline['name'],
@@ -92,48 +93,48 @@ class MyStore {
   }
 
   static Future removeTimelineHosts(List<int> hostIds) async {
-    final timelines = await getTimelines(hostIds);
+    final timelines = await getTimelines(hostIds: hostIds);
     await database!.transaction((txn) async {
+      for (final timeline in timelines) {
+        await removeTimelineItems(timeline.id, txn: txn);
+      }
       await txn.delete('timelines',
           where: 'host_id IN (${_paramQuestions(hostIds)})',
           whereArgs: hostIds);
       await txn.delete('hosts',
           where: 'id IN (${_paramQuestions(hostIds)})', whereArgs: hostIds);
-      for (final timeline in timelines) {
-        await removeTimelineItems(timeline.hostId, timeline.id);
-      }
     });
   }
 
-  static Future<String> get _localPath async {
-    final directory = await path_provider.getApplicationDocumentsDirectory();
-    return directory.path;
-  }
-
   static Future<List<TimelineItem>> getTimelineItems(
-      int timelineHostId, int timelineId) async {
-    final dir = await _localPath;
-    final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
-    if (!await file.exists()) {
-      return [];
-    }
-    final contents = await file.readAsString();
-    final json = convert.jsonDecode(contents);
-    return (json['items'] as List).map((e) => TimelineItem.fromMap(e)).toList();
+      List<int> timelineIds) async {
+    final rows = await database!.query('items',
+        where: 'timeline_id IN (${_paramQuestions(timelineIds)})',
+        whereArgs: timelineIds,
+        orderBy: 'year ASC');
+    return rows.map((e) => TimelineItem.fromMap(e)).toList();
   }
 
   static Future putTimelineItems(
-      int timelineHostId, int timelineId, String contents) async {
-    final dir = await _localPath;
-    final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
-    await file.writeAsString(contents);
+      int timelineHostId, int timelineId, Map<String, dynamic> map) async {
+    await database!.transaction((txn) async {
+      final batch = txn.batch();
+      final items = (map['items'] as List);
+      for (final item in items) {
+        item['timeline_id'] = timelineId;
+        txn.insert('items', item);
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
-  static Future removeTimelineItems(int timelineHostId, int timelineId) async {
-    final dir = await _localPath;
-    final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
-    if (await file.exists()) {
-      await file.delete();
-    }
+  static Future removeTimelineItems(int timelineId, {Transaction? txn}) async {
+    // final dir = await _localPath;
+    // final file = File(path.join(dir, '$timelineHostId-$timelineId.json'));
+    // if (await file.exists()) {
+    //   await file.delete();
+    // }
+    await (txn ?? database!)
+        .delete('items', where: 'timeline_id = ?', whereArgs: [timelineId]);
   }
 }

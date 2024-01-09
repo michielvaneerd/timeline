@@ -12,50 +12,55 @@ class TimelineRepository {
 
   Future<List<TimelineItem>> getTimelineItems(
       TimelineHost timelineHost, Timeline timeline) async {
-    final itemsFromStore =
-        await MyStore.getTimelineItems(timelineHost.id, timeline.id);
+    final itemsFromStore = await MyStore.getTimelineItems([timeline.id]);
     if (itemsFromStore.isNotEmpty) {
       return itemsFromStore;
     }
     final uri =
         '${timelineHost.host}/wp-json/mve-timeline/v1/timelines/${timeline.termId}';
-    final response = await myHttp.getAsString(uri);
+    final response = await myHttp.get(uri);
     await MyStore.putTimelineItems(timelineHost.id, timeline.id, response);
-    return await MyStore.getTimelineItems(timelineHost.id, timeline.id);
+    return await MyStore.getTimelineItems([timeline.id]);
   }
 
-  Future<List<Timeline>> getTimelines({TimelineHost? timelineHost}) async {
-    var storedTimelines = await MyStore.getTimelines(
-        timelineHost != null ? [timelineHost.id] : null);
-    if (storedTimelines.isEmpty && timelineHost != null) {
-      // final response = await myHttp.get(
-      //     '${timelineHost.host}/wp-json/wp/v2/mve_timeline?_fields=id,name,description&hide_empty=1');
-      final response = await myHttp
-          .get('${timelineHost.host}/wp-json/mve-timeline/v1/timelines');
-      await MyStore.putTimelinesFromResponse(
-          (response['items'] as List)
-              .map((e) => e as Map<String, dynamic>)
-              .toList(),
-          timelineHost.id);
-      storedTimelines = await MyStore.getTimelines([timelineHost.id]);
-    }
-    return storedTimelines;
+  Future<Map<String, dynamic>> getTimelinesFromHostname(String host) async {
+    return await myHttp.get('$host/wp-json/mve-timeline/v1/timelines');
   }
+
+  // Future putTimelinesFromResponse(
+  //     Map<String, dynamic> response, TimelineHost timelineHost) async {
+  //   await MyStore.putTimelinesFromResponse(
+  //       (response['items'] as List)
+  //           .map((e) => e as Map<String, dynamic>)
+  //           .toList(),
+  //       timelineHost.id);
+  // }
+
+  // Future<List<Timeline>> getTimelines({TimelineHost? timelineHost}) async {
+  //   var storedTimelines = await MyStore.getTimelines(
+  //       timelineHost != null ? [timelineHost.id] : null);
+  //   if (storedTimelines.isEmpty && timelineHost != null) {
+  //     // final response = await myHttp.get(
+  //     //     '${timelineHost.host}/wp-json/wp/v2/mve_timeline?_fields=id,name,description&hide_empty=1');
+  //     final response = await myHttp
+  //         .get('${timelineHost.host}/wp-json/mve-timeline/v1/timelines');
+  //     await MyStore.putTimelinesFromResponse(
+  //         (response['items'] as List)
+  //             .map((e) => e as Map<String, dynamic>)
+  //             .toList(),
+  //         timelineHost.id);
+  //     storedTimelines = await MyStore.getTimelines([timelineHost.id]);
+  //   }
+  //   return storedTimelines;
+  // }
 
   Future<TimelineAll> getAll() async {
     final activeTimelineId = await MyStore.getActiveTimelineId();
     final timelineHosts = await MyStore.getTimelineHosts();
-    final timelines = await getTimelines();
-    //List<TimelineItem>? timelineItems;
-    //if (activeTimelineId != null) {
-    //   final timeline = timelines.firstWhere((e) => e.id == activeTimelineId);
-    //   final host = timelineHosts.firstWhere((e) => e.id == timeline.hostId);
-    //timelineItems = await getTimelineItems(host, timeline);
-    // }
+    final timelines = await MyStore.getTimelines();
     return TimelineAll(
         activeTimelineId: activeTimelineId,
         timelineHosts: timelineHosts,
-        //timelineItems: timelineItems,
         timelines: timelines);
   }
 }

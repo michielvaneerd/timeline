@@ -27,11 +27,6 @@ class MainCubit extends Cubit<MainState> {
     ));
   }
 
-  // Future refreshTimeline(int timelineHostId, int timelineId) async {
-  //   await MyStore.removeTimelineItems(timelineHostId, timelineId);
-  //   await checkAtStart();
-  // }
-
   void activateTimeline(int timelineId) async {
     emit(const MainState(busy: true));
     await MyStore.putActiveTimelineId(timelineId);
